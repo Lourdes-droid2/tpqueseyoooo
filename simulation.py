@@ -95,12 +95,12 @@ if __name__ == "__main__":
 
     # Definiciones de escenarios según solicitud del usuario
     room_dim = [10.0, 10.0, 10.0]
-    array_center = [2.5, 2.5, 2.5]
-    mic_counts = [4]
-    rt60_values = [0.01]
-    angles = range(0, 181, 180)  # <-- Angulos de 0 a 180 grados en pasos de 10
-    elevations = [0]  # Ángulos de elevación en grados
-    mic_separations = [0.05, 0.10]  # Ejemplo: 5cm, 10cm, 20cm, 30cm
+    array_center = [5, 5, 5]
+    mic_counts = [2, 4, 8]
+    rt60_values = [0.05, 0.7, 2.8]
+    angles = range(0, 181, 10)  # <-- Angulos de 0 a 180 grados en pasos de 10
+    elevations = [0, 15, 30, 60]  # Ángulos de elevación en grados
+    mic_separations = [0.05, 0.10, 0.20]  # Ejemplo: 5cm, 10cm, 20cm, 30cm
 
     for rt60 in rt60_values:
         for n_mics in mic_counts:
@@ -160,7 +160,7 @@ if __name__ == "__main__":
         print(f"\nProcesando configuración {idx+1}/{len(user_defined_simulations)}: {config_name_for_print}")
 
         NUM_MICS = config.get("num_mics", 4)
-        MIC_SEPARATION = 0.10
+        MIC_SEPARATION = config.get("mic_separation", 0.10)
         ARRAY_LENGTH = (NUM_MICS - 1) * MIC_SEPARATION
         room_dim_current = config["room_dim"]
         rt60_current = config["rt60_tgt"]
