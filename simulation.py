@@ -96,49 +96,52 @@ if __name__ == "__main__":
     # Definiciones de escenarios según solicitud del usuario
     room_dim = [10.0, 10.0, 10.0]
     array_center = [2.5, 2.5, 2.5]
-    mic_counts = [2, 4, 8]
-    mic_separation = 0.10
-    rt60_values = [0.01, 0.7, 2.8]
-    angles = range(0, 181, 10)  # <-- Angulos de 0 a 180 grados en pasos de 10
-    elevations = [0, 15, 30, 60 ]  # Ángulos de elevación en grados
+    mic_counts = [4]
+    rt60_values = [0.01]
+    angles = range(0, 181, 180)  # <-- Angulos de 0 a 180 grados en pasos de 10
+    elevations = [0]  # Ángulos de elevación en grados
+    mic_separations = [0.05, 0.10]  # Ejemplo: 5cm, 10cm, 20cm, 30cm
 
     for rt60 in rt60_values:
         for n_mics in mic_counts:
-            for angle in angles:
-                for elevation_deg in elevations:
-                    rad = np.deg2rad(angle)
-                    elev_rad = np.deg2rad(elevation_deg)
-                    dist = 2.0  # Distancia radial al centro del array
+            for mic_separation in mic_separations:  # <--- Agrega este bucle
+                for angle in angles:
+                    for elevation_deg in elevations:
+                        rad = np.deg2rad(angle)
+                        elev_rad = np.deg2rad(elevation_deg)
+                        dist = 2.0  # Distancia radial al centro del array
 
-                    # Coordenadas polares a cartesianas con elevación
-                    xy_dist = dist * np.cos(elev_rad)
-                    src_x = array_center[0] + xy_dist * np.cos(rad)
-                    src_y = array_center[1] + xy_dist * np.sin(rad)
-                    src_z = array_center[2] + dist * np.sin(elev_rad)
-                    source_pos = [src_x, src_y, src_z]
+                        # Coordenadas polares a cartesianas con elevación
+                        xy_dist = dist * np.cos(elev_rad)
+                        src_x = array_center[0] + xy_dist * np.cos(rad)
+                        src_y = array_center[1] + xy_dist * np.sin(rad)
+                        src_z = array_center[2] + dist * np.sin(elev_rad)
+                        source_pos = [src_x, src_y, src_z]
 
-                    # Calcula posiciones de micrófonos (array lineal sobre eje x)
-                    half_array_len = ((n_mics - 1) / 2.0) * mic_separation
-                    mic_positions = []
-                    for i in range(n_mics):
-                        offset = i * mic_separation - half_array_len
-                        mic_pos = [array_center[0] + offset, array_center[1], array_center[2]]
-                        mic_positions.append(mic_pos)
+                        # Calcula posiciones de micrófonos (array lineal sobre eje x)
+                        half_array_len = ((n_mics - 1) / 2.0) * mic_separation
+                        mic_positions = []
+                        for i in range(n_mics):
+                            offset = i * mic_separation - half_array_len
+                            mic_pos = [array_center[0] + offset, array_center[1], array_center[2]]
+                            mic_positions.append(mic_pos)
 
-                    config_id_suffix_str = f"{room_str}_rt60_{rt60}_mics_{n_mics}_az_{angle}_el_{elevation_deg}"
-                    sim_config_entry = {
-                    "config_id_suffix": config_id_suffix_str,
-                    "room_dim": list(room_dim),
-                    "rt60_tgt": rt60,
-                    "is_anechoic": rt60 < 0.1,
-                    "array_center_target": list(array_center),
-                    "array_orientation_axis": 'x',
-                    "source_pos": list(source_pos),
-                    "num_mics": n_mics,
-                    "azimuth_deg": angle,
-                    "elevation_deg": elevation_deg
-                    }
-                    user_defined_simulations.append(sim_config_entry)
+                        room_str = f"room_{room_dim[0]}x{room_dim[1]}x{room_dim[2]}"
+                        config_id_suffix_str = f"{room_str}_rt60_{rt60}_mics_{n_mics}_sep_{mic_separation}_az_{angle}_el_{elevation_deg}"
+                        sim_config_entry = {
+                            "config_id_suffix": config_id_suffix_str,
+                            "room_dim": list(room_dim),
+                            "rt60_tgt": rt60,
+                            "is_anechoic": rt60 < 0.1,
+                            "array_center_target": list(array_center),
+                            "array_orientation_axis": 'x',
+                            "source_pos": list(source_pos),
+                            "num_mics": n_mics,
+                            "azimuth_deg": angle,
+                            "elevation_deg": elevation_deg,
+                            "mic_separation": mic_separation
+                        }
+                        user_defined_simulations.append(sim_config_entry)
         num_random_configs = 0 # Asegurar que no se generen configuraciones aleatorias
 
     all_metadata_entries = []
@@ -247,8 +250,13 @@ if __name__ == "__main__":
                 "actual_azimuth_src_to_array_center_deg": "N/A",
                 "actual_elevation_src_to_array_center_deg": "N/A" # Added elevation
             })
-        for i_mic_meta, mic_c_meta in enumerate(mic_positions_used_by_pra): # Usar mic_positions_used_by_pra que son las reales
-            entry.update({f"mic{i_mic_meta}_pos_x": round(mic_c_meta[0],2), f"mic{i_mic_meta}_pos_y": round(mic_c_meta[1],2), f"mic{i_mic_meta}_pos_z": round(mic_c_meta[2],2)})
+        for i_mic_meta, mic_c_meta in enumerate(mic_positions_used_by_pra):
+            entry.update({
+                f"mic{i_mic_meta}_pos_x": round(mic_c_meta[0],2),
+                f"mic{i_mic_meta}_pos_y": round(mic_c_meta[1],2),
+                f"mic{i_mic_meta}_pos_z": round(mic_c_meta[2],2),
+                f"dist_src_to_mic{i_mic_meta}_m": round(np.linalg.norm(np.array(mic_c_meta) - np.array(source_pos_current)), 3)
+            })
         all_metadata_entries.append(entry)
         print(f"INFO: Configuración {config_id_str_current} procesada con {rirs_created_for_config} RIRs.")
 
